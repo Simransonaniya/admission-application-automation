@@ -1,0 +1,470 @@
+{
+  "name": "Admission Application Processing",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Admission Application",
+        "formDescription": "Fill in your details to apply for admission. Our admissions team will contact you soon.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Full Name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Phone",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Date of Birth",
+              "fieldType": "date",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Program",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "School - Primary"
+                  },
+                  {
+                    "option": "School - Secondary"
+                  },
+                  {
+                    "option": "School - Higher Secondary"
+                  },
+                  {
+                    "option": "College - Undergraduate"
+                  },
+                  {
+                    "option": "College - Postgraduate"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Previous Marks Percentage",
+              "fieldType": "number",
+              "placeholder": "e.g. 78",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {
+          "path": "admission-application",
+          "respondWithOptions": {
+            "values": {
+              "formSubmittedText": "Thank you! Your application has been received."
+            }
+          }
+        }
+      },
+      "id": "bcaee684-46bf-4744-9c7f-715dfceb16fb",
+      "name": "Application Form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "1206746c-4dc4-47ee-b05d-89a238baf33f"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "r1",
+              "name": "min_marks",
+              "value": 60,
+              "type": "number"
+            },
+            {
+              "id": "r2",
+              "name": "min_age",
+              "value": 3,
+              "type": "number"
+            },
+            {
+              "id": "r3",
+              "name": "max_age",
+              "value": 30,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "72beff59-05be-4055-86ea-dfda8de8c923",
+      "name": "Eligibility Rules",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c1",
+              "name": "applicant_name",
+              "value": "={{ $('Application Form').item.json['Full Name'] }}",
+              "type": "string"
+            },
+            {
+              "id": "c2",
+              "name": "email",
+              "value": "={{ $('Application Form').item.json['Email'] }}",
+              "type": "string"
+            },
+            {
+              "id": "c3",
+              "name": "phone",
+              "value": "={{ String($('Application Form').item.json['Phone']) }}",
+              "type": "string"
+            },
+            {
+              "id": "c4",
+              "name": "date_of_birth",
+              "value": "={{ $('Application Form').item.json['Date of Birth'] }}",
+              "type": "string"
+            },
+            {
+              "id": "c5",
+              "name": "age",
+              "value": "={{ Math.floor($now.diff(DateTime.fromISO($('Application Form').item.json['Date of Birth']), 'years').years) }}",
+              "type": "number"
+            },
+            {
+              "id": "c6",
+              "name": "program",
+              "value": "={{ $('Application Form').item.json['Program'] }}",
+              "type": "string"
+            },
+            {
+              "id": "c7",
+              "name": "previous_marks",
+              "value": "={{ Number($('Application Form').item.json['Previous Marks Percentage']) }}",
+              "type": "number"
+            },
+            {
+              "id": "c8",
+              "name": "eligibility_status",
+              "value": "={{ (Number($('Application Form').item.json['Previous Marks Percentage']) >= $json.min_marks && Math.floor($now.diff(DateTime.fromISO($('Application Form').item.json['Date of Birth']), 'years').years) >= $json.min_age && Math.floor($now.diff(DateTime.fromISO($('Application Form').item.json['Date of Birth']), 'years').years) <= $json.max_age) ? \"Eligible\" : \"Not Eligible\" }}",
+              "type": "string"
+            },
+            {
+              "id": "c9",
+              "name": "eligibility_reason",
+              "value": "={{ (() => { const age = Math.floor($now.diff(DateTime.fromISO($('Application Form').item.json['Date of Birth']), 'years').years); const marks = Number($('Application Form').item.json['Previous Marks Percentage']); const r = []; if (marks < $json.min_marks) r.push(\"Marks \" + marks + \"% below minimum \" + $json.min_marks + \"%\"); if (age < $json.min_age) r.push(\"Age \" + age + \" below minimum \" + $json.min_age); if (age > $json.max_age) r.push(\"Age \" + age + \" above maximum \" + $json.max_age); return r.length ? r.join(\"; \") : \"Meets all eligibility criteria\"; })() }}",
+              "type": "string"
+            },
+            {
+              "id": "c10",
+              "name": "submitted_at",
+              "value": "={{ $('Application Form').item.json.submittedAt }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "70465e65-9941-45c7-ace2-f14a781cc42e",
+      "name": "Check Eligibility",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "EBz0lDxkLCW1FG58",
+          "cachedResultName": "admission_applications"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "applicant_name": "={{ $json.applicant_name }}",
+            "email": "={{ $json.email }}",
+            "phone": "={{ $json.phone }}",
+            "date_of_birth": "={{ $json.date_of_birth }}",
+            "age": "={{ $json.age }}",
+            "program": "={{ $json.program }}",
+            "previous_marks": "={{ $json.previous_marks }}",
+            "eligibility_status": "={{ $json.eligibility_status }}",
+            "eligibility_reason": "={{ $json.eligibility_reason }}",
+            "submitted_at": "={{ $json.submitted_at }}"
+          },
+          "schema": [
+            {
+              "id": "applicant_name",
+              "displayName": "applicant_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "date_of_birth",
+              "displayName": "date_of_birth",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "age",
+              "displayName": "age",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "program",
+              "displayName": "program",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "previous_marks",
+              "displayName": "previous_marks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "eligibility_status",
+              "displayName": "eligibility_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "eligibility_reason",
+              "displayName": "eligibility_reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "submitted_at",
+              "displayName": "submitted_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "18dc4e36-bbda-4fde-94f8-b7c91bb380c5",
+      "name": "Save Application",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        672,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "simransonaniya481@gmail.com",
+        "subject": "=New Application ({{ $('Check Eligibility').item.json.eligibility_status }}): {{ $('Check Eligibility').item.json.applicant_name }} - {{ $('Check Eligibility').item.json.program }}",
+        "message": "=<h3>New admission application</h3><p><b>Name:</b> {{ $('Check Eligibility').item.json.applicant_name }}<br><b>Email:</b> {{ $('Check Eligibility').item.json.email }}<br><b>Phone:</b> {{ $('Check Eligibility').item.json.phone }}<br><b>Date of Birth:</b> {{ $('Check Eligibility').item.json.date_of_birth }} (Age {{ $('Check Eligibility').item.json.age }})<br><b>Program:</b> {{ $('Check Eligibility').item.json.program }}<br><b>Previous Marks:</b> {{ $('Check Eligibility').item.json.previous_marks }}%</p><p><b>Eligibility:</b> {{ $('Check Eligibility').item.json.eligibility_status }}<br><b>Details:</b> {{ $('Check Eligibility').item.json.eligibility_reason }}</p>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "f3b5f99c-a291-49ae-b1fa-02400f294568",
+      "name": "Notify Admissions Team",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        896,
+        0
+      ],
+      "webhookId": "9603f6ba-0b29-4d93-b491-f817b6a4706f",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "9Fv8X6PHMWv0uV6X",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Application Form": [
+      {
+        "json": {
+          "submittedAt": "2026-10-01T10:30:00.000+05:30",
+          "formMode": "instanceAi",
+          "Full Name": "Aarav Sharma",
+          "Email": "aarav.sharma@mail.com",
+          "Phone": "9876543210",
+          "Date of Birth": "2007-05-14",
+          "Program": "College - Undergraduate",
+          "Previous Marks Percentage": 52
+        }
+      },
+      {
+        "json": {
+          "submittedAt": "2026-10-01T11:00:00.000+05:30",
+          "formMode": "instanceAi",
+          "Full Name": "Riya Verma",
+          "Email": "riya.verma@mail.com",
+          "Phone": "9123456780",
+          "Date of Birth": "2006-08-21",
+          "Program": "College - Undergraduate",
+          "Previous Marks Percentage": 78
+        }
+      },
+      {
+        "json": {
+          "submittedAt": "2026-10-01T11:30:00.000+05:30",
+          "formMode": "instanceAi",
+          "Full Name": "Karan Singh",
+          "Email": "karan.singh@mail.com",
+          "Phone": "9988776655",
+          "Date of Birth": "2005-01-09",
+          "Program": "College - Undergraduate",
+          "Previous Marks Percentage": 35
+        }
+      },
+      {
+        "json": {
+          "submittedAt": "2026-10-01T12:00:00.000+05:30",
+          "formMode": "instanceAi",
+          "Full Name": "Neha Patel",
+          "Email": "neha.patel@mail.com",
+          "Phone": "9090909090",
+          "Date of Birth": "2011-03-10",
+          "Program": "School - Class 9",
+          "Previous Marks Percentage": 85
+        }
+      },
+      {
+        "json": {
+          "submittedAt": "2026-10-01T12:30:00.000+05:30",
+          "formMode": "instanceAi",
+          "Full Name": "Rohan Mehta",
+          "Email": "rohan.mehta@mail.com",
+          "Phone": "8899001122",
+          "Date of Birth": "2004-12-02",
+          "Program": "College - Undergraduate",
+          "Previous Marks Percentage": 91
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Application Form": {
+      "main": [
+        [
+          {
+            "node": "Eligibility Rules",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eligibility Rules": {
+      "main": [
+        [
+          {
+            "node": "Check Eligibility",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Eligibility": {
+      "main": [
+        [
+          {
+            "node": "Save Application",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Application": {
+      "main": [
+        [
+          {
+            "node": "Notify Admissions Team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": -1,
+    "availableInMCP": false
+  },
+  "versionId": "4e95b006-716d-4dfe-8695-f4f72ee26fd4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a8a27f3f18c9d91d5ea2f0f109f0832f61832d79ce28cbbf948ea3c9727e24f9"
+  },
+  "nodeGroups": [],
+  "id": "1ASMYIoIRhaFi8PM",
+  "tags": []
+}
